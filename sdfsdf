@@ -1,0 +1,60 @@
+local Players = game:GetService("Players")
+local localPlayer = Players.LocalPlayer
+
+local function fireDialog(remoteType, arg2)
+    local remote = workspace:WaitForChild(remoteType)
+    remote:FireServer("ClickedBubble", arg2)
+end
+
+local function solveCustomer(customer)
+    local head = customer:FindFirstChild("Head")
+    if not head then return end
+
+    local dialog = head:FindFirstChild("Dialog")
+    if not dialog then return end
+
+    -- Ищем правильный выбор
+    local correctChoice = dialog:FindFirstChild("Correct")
+    if not correctChoice then return end
+
+    -- Шаг 1: начать диалог (кликнуть на пузырь)
+    workspace:WaitForChild("Dialog"):FireServer("ClickedBubble", head)
+
+    task.wait(0.5)
+
+    -- Шаг 2: выбрать правильный ответ
+    workspace:WaitForChild("Dialog"):FireServer("ClickedBubble", correctChoice)
+
+    task.wait(0.5)
+
+    -- Шаг 3: закончить диалог
+    workspace:WaitForChild("Dialog"):FireServer("EndConversation", head)
+
+    print("✅ Solved: " .. customer.Name .. " | " .. correctChoice.UserDialog)
+end
+
+local function autoSolveAll()
+    local customers = workspace:FindFirstChild("Customers")
+    if not customers then
+        warn("Папка Customers не найдена!")
+        return
+    end
+
+    for _, customer in ipairs(customers:GetChildren()) do
+        if customer:FindFirstChild("Head") then
+            task.spawn(function()
+                solveCustomer(customer)
+            end)
+            task.wait(0.3)
+        end
+    end
+end
+
+-- Запуск
+autoSolveAll()
+
+-- Авто-повтор при появлении новых кастомеров
+workspace:WaitForChild("Customers").ChildAdded:Connect(function(customer)
+    task.wait(1) -- дать время загрузиться
+    solveCustomer(customer)
+end)
