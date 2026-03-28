@@ -1,112 +1,98 @@
--- Маппинг ResponseDialog -> название кнопки
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
 local orderMap = {
     ["Fizzly is my favorite drink. Gimme that please."] = "MountainDew",
     ["Hey pizza person. Give me a pepperoni pizza/Hi"] = "PepperoniPizza",
     ["OMG the sausage pizza looks heavenly! I'll have that./Amazed"] = "SausagePizza",
 }
 
--- Если появятся новые варианты — ищем ключевые слова
 local function getProductFromResponse(response)
-    -- Прямое совпадение
-    if orderMap[response] then
-        return orderMap[response]
-    end
-    -- Фоллбэк по ключевым словам
+    if orderMap[response] then return orderMap[response] end
     local lower = response:lower()
-    if lower:find("fizzly") or lower:find("mountain") or lower:find("dew") then
-        return "MountainDew"
-    elseif lower:find("pepperoni") then
-        return "PepperoniPizza"
-    elseif lower:find("sausage") then
-        return "SausagePizza"
-    elseif lower:find("cheese") then
-        return "CheesePizza"
+    if lower:find("fizzly") or lower:find("mountain") or lower:find("dew") then return "MountainDew"
+    elseif lower:find("pepperoni") then return "PepperoniPizza"
+    elseif lower:find("sausage") then return "SausagePizza"
+    elseif lower:find("cheese") then return "CheesePizza"
     end
     return nil
 end
 
 local function getRegister()
-    -- Ищем любой доступный регистр
     for i = 1, 5 do
         local reg = workspace:FindFirstChild("Register" .. i)
-        if reg then return reg, i end
+        if reg then return reg end
     end
-    return workspace:FindFirstChild("Register2"), 2
-end
-
-local function pressProductButton(productName)
-    local register, _ = getRegister()
-    if not register then
-        warn("Регистр не найден!")
-        return
-    end
-
-    local button = register:FindFirstChild("Button" .. productName)
-    if not button then
-        warn("Кнопка не найдена: Button" .. productName)
-        return
-    end
-
-    workspace:WaitForChild("GameService")
-        :WaitForChild("RegisterButtonPressedNoCustomer")
-        :FireServer(productName, button)
-
-    print("🛒 Нажата кнопка: " .. productName)
+    return nil
 end
 
 local function solveCustomer(customer)
     local head = customer:FindFirstChild("Head")
     if not head then return end
 
-    local dialog = head:FindFirstChild("Dialog")
-    if not dialog then return end
+    -- DialogSimple содержит Correct (не Dialog!)
+    local dialogSimple = head:FindFirstChild("DialogSimple")
+    if not dialogSimple then return end
 
-    local correctChoice = dialog:FindFirstChild("Correct")
+    local correctChoice = dialogSimple:FindFirstChild("Correct")
     if not correctChoice then return end
 
     local response = correctChoice.ResponseDialog
     local product = getProductFromResponse(response)
 
-    -- Шаг 1: начать диалог
+    if not product then
+        warn("⚠️ Неизвестный товар: " .. tostring(response))
+        return
+    end
+
+    local register = getRegister()
+    if not register then
+        warn("Регистр не найден!")
+        return
+    end
+
+    -- Шаг 1: кликнуть на пузырь
     workspace:WaitForChild("Dialog"):FireServer("ClickedBubble", head)
-    task.wait(0.5)
-
-    -- Шаг 2: выбрать правильный ответ
-    workspace:WaitForChild("Dialog"):FireServer("ClickedBubble", correctChoice)
-    task.wait(0.5)
-
-    -- Шаг 3: закончить диалог
-    workspace:WaitForChild("Dialog"):FireServer("EndConversation", head)
     task.wait(0.3)
 
-    -- Шаг 4: нажать кнопку товара
-    if product then
-        pressProductButton(product)
-        print("✅ " .. customer.Name .. " -> " .. product)
-    else
-        warn("⚠️ Неизвестный товар для: " .. response)
-    end
+    -- Шаг 2: TutorialService
+    workspace:WaitForChild("TutorialService")
+        :WaitForChild("PlayerAction"):FireServer("ClickedBubble", true)
+    task.wait(0.3)
+
+    -- Шаг 3: выбрать правильный ответ (ResponseSelected + DialogSimple.Correct)
+    workspace:WaitForChild("Dialog"):FireServer("ResponseSelected", correctChoice, head)
+    task.wait(0.3)
+
+    -- Шаг 4: анимации
+    workspace:WaitForChild("Animation"):WaitForChild("AnimationStopped"):FireServer("Hi")
+    task.wait(0.1)
+    workspace:WaitForChild("Animation"):WaitForChild("AnimationStarted"):FireServer("Hi")
+    task.wait(0.3)
+
+    -- Шаг 5: финальный ремот с товаром
+    local finalRemote = ReplicatedStorage
+        :WaitForChild("Communication")
+        :WaitForChild("Events")
+        :WaitForChild("") -- пустое имя как в логе
+        :FireServer(customer, product, register)
+
+    print("✅ " .. customer.Name .. " -> " .. product)
 end
 
 local function autoSolveAll()
     local customers = workspace:FindFirstChild("Customers")
-    if not customers then
-        warn("Папка Customers не найдена!")
-        return
-    end
+    if not customers then warn("Папка Customers не найдена!") return end
 
     for _, customer in ipairs(customers:GetChildren()) do
         if customer:FindFirstChild("Head") then
             task.spawn(solveCustomer, customer)
-            task.wait(0.4)
+            task.wait(0.5)
         end
     end
 end
 
--- Запуск
 autoSolveAll()
 
--- Авто на новых кастомеров
 workspace:WaitForChild("Customers").ChildAdded:Connect(function(customer)
     task.wait(1)
     solveCustomer(customer)
