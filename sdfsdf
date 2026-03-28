@@ -77,11 +77,16 @@ local function solveCustomer(customer)
     task.wait(0.4)
 
     -- Шаг 5: нажать кнопку товара
-    workspace:WaitForChild("GameService")
-        :WaitForChild("RegisterButtonPressedNoCustomer")
-        :FireServer(product, button)
+-- Шаг 5: нажать кнопку товара через Detector
+local button = register:FindFirstChild("Button" .. product)
+if not button then warn("Кнопка не найдена: Button" .. product) return end
 
-    print("✅ " .. customer.Name .. " -> " .. product)
+local detector = button:FindFirstChild("Detector")
+if not detector then warn("Detector не найден!") return end
+
+detector:FireServer()
+
+print("✅ " .. customer.Name .. " -> " .. product)
 end
 
 local function autoSolveAll()
