@@ -1,7 +1,14 @@
 local orderMap = {
+    -- Fizzly (MountainDew)
     ["Fizzly is my favorite drink. Gimme that please."] = "MountainDew",
+    ["I have a thrist that can only be quenched with a Fizzly"] = "MountainDew",
+    ["Could I get uh....a Fizzly please?/Think"] = "MountainDew",
+    -- Pepperoni
     ["Hey pizza person. Give me a pepperoni pizza/Hi"] = "PepperoniPizza",
+    ["Could I get a pepperoni pizza please?"] = "PepperoniPizza",
+    -- Sausage
     ["OMG the sausage pizza looks heavenly! I'll have that./Amazed"] = "SausagePizza",
+    -- Cheese
 }
 
 local function getProductFromResponse(response)
@@ -27,17 +34,18 @@ local function solveCustomer(customer)
     local head = customer:FindFirstChild("Head")
     if not head then return end
 
-    local dialogSimple = head:FindFirstChild("DialogSimple")
-    if not dialogSimple then return end
+    -- Читаем из Dialog (не DialogSimple!)
+    local dialog = head:FindFirstChild("Dialog")
+    if not dialog then return end
 
-    local correctChoice = dialogSimple:FindFirstChild("Correct")
+    local correctChoice = dialog:FindFirstChild("Correct")
     if not correctChoice then return end
 
     local response = correctChoice.ResponseDialog
     local product = getProductFromResponse(response)
 
     if not product then
-        warn("⚠️ Неизвестный товар: " .. tostring(response))
+        warn("⚠️ Неизвестный товар: '" .. tostring(response) .. "'")
         return
     end
 
@@ -56,7 +64,7 @@ local function solveCustomer(customer)
         :WaitForChild("PlayerAction"):FireServer("ClickedBubble", true)
     task.wait(0.3)
 
-    -- Шаг 3: выбрать правильный ответ
+    -- Шаг 3: выбрать правильный ответ (из Dialog, не DialogSimple)
     workspace:WaitForChild("Dialog"):FireServer("ResponseSelected", correctChoice, head)
     task.wait(0.3)
 
