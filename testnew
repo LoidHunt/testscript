@@ -1,0 +1,25 @@
+local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+
+local player = Players.LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
+local root = character:WaitForChild("HumanoidRootPart")
+
+local target = workspace["wood chair"]
+local targetPos = target:IsA("Model") and target.PrimaryPart or target:IsA("BasePart") and target
+
+if not targetPos then
+    warn("Не найдена позиция цели!")
+    return
+end
+
+local goalCFrame = CFrame.new(targetPos.Position + Vector3.new(0, 3, 0))
+
+local tween = TweenService:Create(root, TweenInfo.new(1.5, Enum.EasingStyle.Quad, Enum.EasingDirection.InOut), {
+    CFrame = goalCFrame
+})
+
+tween:Play()
+tween.Completed:Connect(function()
+    print("✅ Телепорт завершён!")
+end)
