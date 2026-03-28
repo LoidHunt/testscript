@@ -1,41 +1,84 @@
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Workspace = game:GetService("Workspace")
 local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
-local UserInputService = game:GetService("UserInputService")
 
 local player = Players.LocalPlayer
-local camera = workspace.CurrentCamera
+local playerGui = player:WaitForChild("PlayerGui")
 
-local sensitivity = 0.3
-local angleX = 0
-local angleY = 0
-local lastMousePos = nil
-local CAMERA_DISTANCE = 8
-local CAMERA_HEIGHT = 2
+local function getButtonInfo(buttonId)
+    local modules = ReplicatedStorage:FindFirstChild("Modules")
+    local shared = modules and modules:FindFirstChild("Shared")
+    local buttonConfig = shared and shared:FindFirstChild("ButtonConfig")
+    local data = buttonConfig and require(buttonConfig).GetData(buttonId) or nil
+    if not data then return "Unknown Mechanism\n⬠" end
+    local result = "Mystery Button"
+    if data.itemName then
+        result = "Spawns " .. data.itemName
+    else
+        result = data.trap and "Lethal Trap"
+            or data.generateCode and "Terminal Code"
+            or data.triggerPlatforms and "Activates Platforms"
+            or data.triggerWallDoor and "Opens Wall Door"
+            or data.triggerZombieAmbush and "Zombie Ambush"
+            or data.triggerZombieTank and "Zombie TANK"
+            or data.triggerEarthquake and "Triggers Earthquake"
+            or data.triggerCeilingTrap and "Ceiling Trap"
+            or data.triggerZeroGravity and "Zero Gravity"
+            or data.triggerSlipperyFloor and "Slippery Floor"
+            or data.triggerGasTrap and "Poisonous Gas"
+            or data.triggerBombTrap and "Time Bomb"
+            or data.triggerDarknessTrap and "Power Outage"
+            or data.triggerBoxingGlove and "Boxing Glove"
+            or result
+    end
+    return result .. "\n⬠"
+end
 
-RunService.RenderStepped:Connect(function()
-    local character = player.Character
-    if not character then return end
-    local root = character:FindFirstChild("HumanoidRootPart")
-    if not root then return end
+local billboards = {}
 
-    local mousePos = UserInputService:GetMouseLocation()
+local function clearBillboards()
+    for _, v in ipairs(billboards) do
+        if v and v.Parent then v:Destroy() end
+    end
+    billboards = {}
+end
 
-    if lastMousePos then
-        local delta = mousePos - lastMousePos
-        if delta.Magnitude > 0 and delta.Magnitude < 100 then
-            angleX = angleX - delta.X * sensitivity
-            angleY = math.clamp(angleY - delta.Y * sensitivity, -60, 60)
+local function showVisorESP()
+    clearBillboards()
+    local buttonVisualsGui = ReplicatedStorage:FindFirstChild("ButtonVisualsGui")
+
+    for _, obj in ipairs(Workspace:GetDescendants()) do
+        local buttonId = obj:GetAttribute("ButtonId")
+        if buttonId then
+            local part = obj:IsA("Model") and obj.PrimaryPart or obj:IsA("BasePart") and obj
+            if part then
+                local billboard
+                if buttonVisualsGui then
+                    billboard = buttonVisualsGui:Clone()
+                    billboard.Adornee = part
+                    local label = billboard:FindFirstChildWhichIsA("TextLabel")
+                    if label then
+                        label.Text = getButtonInfo(buttonId)
+                    end
+                else
+                    billboard = Instance.new("BillboardGui")
+                    billboard.Size = UDim2.new(0, 150, 0, 50)
+                    billboard.StudsOffset = Vector3.new(0, 1.5, 0)
+                    billboard.AlwaysOnTop = true
+                    local label = Instance.new("TextLabel", billboard)
+                    label.Size = UDim2.new(1, 0, 1, 0)
+                    label.BackgroundTransparency = 1
+                    label.TextColor3 = Color3.fromRGB(50, 255, 50)
+                    label.TextScaled = true
+                    label.Font = Enum.Font.Oswald
+                    label.Text = getButtonInfo(buttonId)
+                end
+                billboard.Parent = playerGui
+                table.insert(billboards, billboard)
+            end
         end
     end
-    lastMousePos = mousePos
+    print("✅ ESP включён, кнопок найдено: " .. #billboards)
+end
 
-    local rootPos = root.Position + Vector3.new(0, CAMERA_HEIGHT, 0)
-
-    local offset = CFrame.new(rootPos)
-        * CFrame.Angles(0, math.rad(angleX), 0)
-        * CFrame.Angles(math.rad(angleY), 0, 0)
-        * CFrame.new(0, 0, CAMERA_DISTANCE)
-
-    camera.CameraType = Enum.CameraType.Scriptable
-    camera.CFrame = CFrame.new(offset.Position, rootPos)
-end)
+showVisorESP()
