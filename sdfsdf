@@ -1,5 +1,5 @@
 local orderMap = {
-    -- Fizzly (MountainDew)
+    -- MountainDew
     ["Fizzly is my favorite drink. Gimme that please."] = "MountainDew",
     ["I have a thrist that can only be quenched with a Fizzly"] = "MountainDew",
     ["Could I get uh....a Fizzly please?/Think"] = "MountainDew",
@@ -10,7 +10,6 @@ local orderMap = {
     ["OMG the sausage pizza looks heavenly! I'll have that./Amazed"] = "SausagePizza",
     -- CheesePizza
     ["I'll have your finest cheese pizza please."] = "CheesePizza",
-    -- Cheese
 }
 
 local function getProductFromResponse(response)
@@ -32,11 +31,24 @@ local function getRegister()
     return nil
 end
 
+local function pressProduct(customer, product, register)
+    local events = game:GetService("ReplicatedStorage")
+        :WaitForChild("Communication")
+        :WaitForChild("Events")
+
+    for _, remote in ipairs(events:GetChildren()) do
+        if remote.Name == "" and remote:IsA("RemoteEvent") then
+            pcall(function()
+                remote:FireServer(customer, product, register)
+            end)
+        end
+    end
+end
+
 local function solveCustomer(customer)
     local head = customer:FindFirstChild("Head")
     if not head then return end
 
-    -- Читаем из Dialog (не DialogSimple!)
     local dialog = head:FindFirstChild("Dialog")
     if not dialog then return end
 
@@ -54,9 +66,6 @@ local function solveCustomer(customer)
     local register = getRegister()
     if not register then warn("Регистр не найден!") return end
 
-    local button = register:FindFirstChild("Button" .. product)
-    if not button then warn("Кнопка не найдена: Button" .. product) return end
-
     -- Шаг 1: кликнуть на пузырь
     workspace:WaitForChild("Dialog"):FireServer("ClickedBubble", head)
     task.wait(0.3)
@@ -66,7 +75,7 @@ local function solveCustomer(customer)
         :WaitForChild("PlayerAction"):FireServer("ClickedBubble", true)
     task.wait(0.3)
 
-    -- Шаг 3: выбрать правильный ответ (из Dialog, не DialogSimple)
+    -- Шаг 3: выбрать правильный ответ
     workspace:WaitForChild("Dialog"):FireServer("ResponseSelected", correctChoice, head)
     task.wait(0.3)
 
@@ -76,17 +85,10 @@ local function solveCustomer(customer)
     workspace:WaitForChild("Animation"):WaitForChild("AnimationStarted"):FireServer("Hi")
     task.wait(0.4)
 
-    -- Шаг 5: нажать кнопку товара
--- Шаг 5: нажать кнопку товара через Detector
-local button = register:FindFirstChild("Button" .. product)
-if not button then warn("Кнопка не найдена: Button" .. product) return end
+    -- Шаг 5: нажать кнопку товара (файрим все пустые ремоты)
+    pressProduct(customer, product, register)
 
-local detector = button:FindFirstChild("Detector")
-if not detector then warn("Detector не найден!") return end
-
-detector:FireServer()
-
-print("✅ " .. customer.Name .. " -> " .. product)
+    print("✅ " .. customer.Name .. " -> " .. product)
 end
 
 local function autoSolveAll()
