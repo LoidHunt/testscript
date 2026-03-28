@@ -1,111 +1,41 @@
-local orderMap = {
-    -- MountainDew
-    ["Fizzly is my favorite drink. Gimme that please."] = "MountainDew",
-    ["I have a thrist that can only be quenched with a Fizzly"] = "MountainDew",
-    ["Could I get uh....a Fizzly please?/Think"] = "MountainDew",
-    -- PepperoniPizza
-    ["Hey pizza person. Give me a pepperoni pizza/Hi"] = "PepperoniPizza",
-    ["Could I get a pepperoni pizza please?"] = "PepperoniPizza",
-    -- SausagePizza
-    ["OMG the sausage pizza looks heavenly! I'll have that./Amazed"] = "SausagePizza",
-    -- CheesePizza
-    ["I'll have your finest cheese pizza please."] = "CheesePizza",
-}
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
 
-local function getProductFromResponse(response)
-    if orderMap[response] then return orderMap[response] end
-    local lower = response:lower()
-    if lower:find("fizzly") or lower:find("mountain") or lower:find("dew") then return "MountainDew"
-    elseif lower:find("pepperoni") then return "PepperoniPizza"
-    elseif lower:find("sausage") then return "SausagePizza"
-    elseif lower:find("cheese") then return "CheesePizza"
-    end
-    return nil
-end
+local player = Players.LocalPlayer
+local camera = workspace.CurrentCamera
 
-local function getRegister()
-    for i = 1, 5 do
-        local reg = workspace:FindFirstChild("Register" .. i)
-        if reg then return reg end
-    end
-    return nil
-end
+local sensitivity = 0.3
+local angleX = 0
+local angleY = 0
+local lastMousePos = nil
+local CAMERA_DISTANCE = 8
+local CAMERA_HEIGHT = 2
 
-local function pressProduct(customer, product, register)
-    local events = game:GetService("ReplicatedStorage")
-        :WaitForChild("Communication")
-        :WaitForChild("Events")
+RunService.RenderStepped:Connect(function()
+    local character = player.Character
+    if not character then return end
+    local root = character:FindFirstChild("HumanoidRootPart")
+    if not root then return end
 
-    for _, remote in ipairs(events:GetChildren()) do
-        if remote.Name == "" and remote:IsA("RemoteEvent") then
-            pcall(function()
-                remote:FireServer(customer, product, register)
-            end)
+    local mousePos = UserInputService:GetMouseLocation()
+
+    if lastMousePos then
+        local delta = mousePos - lastMousePos
+        if delta.Magnitude > 0 and delta.Magnitude < 100 then
+            angleX = angleX - delta.X * sensitivity
+            angleY = math.clamp(angleY - delta.Y * sensitivity, -60, 60)
         end
     end
-end
+    lastMousePos = mousePos
 
-local function solveCustomer(customer)
-    local head = customer:FindFirstChild("Head")
-    if not head then return end
+    local rootPos = root.Position + Vector3.new(0, CAMERA_HEIGHT, 0)
 
-    local dialog = head:FindFirstChild("Dialog")
-    if not dialog then return end
+    local offset = CFrame.new(rootPos)
+        * CFrame.Angles(0, math.rad(angleX), 0)
+        * CFrame.Angles(math.rad(angleY), 0, 0)
+        * CFrame.new(0, 0, CAMERA_DISTANCE)
 
-    local correctChoice = dialog:FindFirstChild("Correct")
-    if not correctChoice then return end
-
-    local response = correctChoice.ResponseDialog
-    local product = getProductFromResponse(response)
-
-    if not product then
-        warn("⚠️ Неизвестный товар: '" .. tostring(response) .. "'")
-        return
-    end
-
-    local register = getRegister()
-    if not register then warn("Регистр не найден!") return end
-
-    -- Шаг 1: кликнуть на пузырь
-    workspace:WaitForChild("Dialog"):FireServer("ClickedBubble", head)
-    task.wait(0.3)
-
-    -- Шаг 2: TutorialService
-    workspace:WaitForChild("TutorialService")
-        :WaitForChild("PlayerAction"):FireServer("ClickedBubble", true)
-    task.wait(0.3)
-
-    -- Шаг 3: выбрать правильный ответ
-    workspace:WaitForChild("Dialog"):FireServer("ResponseSelected", correctChoice, head)
-    task.wait(0.3)
-
-    -- Шаг 4: анимации
-    workspace:WaitForChild("Animation"):WaitForChild("AnimationStopped"):FireServer("Hi")
-    task.wait(0.1)
-    workspace:WaitForChild("Animation"):WaitForChild("AnimationStarted"):FireServer("Hi")
-    task.wait(0.4)
-
-    -- Шаг 5: нажать кнопку товара (файрим все пустые ремоты)
-    pressProduct(customer, product, register)
-
-    print("✅ " .. customer.Name .. " -> " .. product)
-end
-
-local function autoSolveAll()
-    local customers = workspace:FindFirstChild("Customers")
-    if not customers then warn("Папка Customers не найдена!") return end
-
-    for _, customer in ipairs(customers:GetChildren()) do
-        if customer:FindFirstChild("Head") then
-            task.spawn(solveCustomer, customer)
-            task.wait(0.5)
-        end
-    end
-end
-
-autoSolveAll()
-
-workspace:WaitForChild("Customers").ChildAdded:Connect(function(customer)
-    task.wait(1)
-    solveCustomer(customer)
+    camera.CameraType = Enum.CameraType.Scriptable
+    camera.CFrame = CFrame.new(offset.Position, rootPos)
 end)
