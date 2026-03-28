@@ -3,11 +3,13 @@ local orderMap = {
     ["Fizzly is my favorite drink. Gimme that please."] = "MountainDew",
     ["I have a thrist that can only be quenched with a Fizzly"] = "MountainDew",
     ["Could I get uh....a Fizzly please?/Think"] = "MountainDew",
-    -- Pepperoni
+    -- PepperoniPizza
     ["Hey pizza person. Give me a pepperoni pizza/Hi"] = "PepperoniPizza",
     ["Could I get a pepperoni pizza please?"] = "PepperoniPizza",
-    -- Sausage
+    -- SausagePizza
     ["OMG the sausage pizza looks heavenly! I'll have that./Amazed"] = "SausagePizza",
+    -- CheesePizza
+    ["I'll have your finest cheese pizza please."] = "CheesePizza",
     -- Cheese
 }
 
