@@ -1,25 +1,36 @@
 local Players = game:GetService("Players")
-local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
 
 local player = Players.LocalPlayer
 local character = player.Character or player.CharacterAdded:Wait()
 local root = character:WaitForChild("HumanoidRootPart")
+local humanoid = character:WaitForChild("Humanoid")
 
 local target = workspace["wood chair"]
-local targetPos = target:IsA("Model") and target.PrimaryPart or target:IsA("BasePart") and target
+local targetPos = target:IsA("Model") and target.PrimaryPart and target.PrimaryPart.Position or target:IsA("BasePart") and target.Position
 
-if not targetPos then
-    warn("Не найдена позиция цели!")
-    return
-end
+if not targetPos then warn("Цель не найдена!") return end
 
-local goalCFrame = CFrame.new(targetPos.Position + Vector3.new(0, 3, 0))
+local goalPos = targetPos + Vector3.new(0, 3, 0)
+local duration = 1.5
+local elapsed = 0
+local startPos = root.Position
 
-local tween = TweenService:Create(root, TweenInfo.new(1.5, Enum.EasingStyle.Quad, Enum.EasingDirection.InOut), {
-    CFrame = goalCFrame
-})
+humanoid.WalkSpeed = 0
+humanoid.JumpPower = 0
 
-tween:Play()
-tween.Completed:Connect(function()
-    print("✅ Телепорт завершён!")
+local conn
+conn = RunService.Heartbeat:Connect(function(dt)
+    elapsed = elapsed + dt
+    local alpha = math.min(elapsed / duration, 1)
+    local smooth = alpha * alpha * (3 - 2 * alpha) -- smoothstep
+
+    root.CFrame = CFrame.new(startPos:Lerp(goalPos, smooth))
+
+    if alpha >= 1 then
+        conn:Disconnect()
+        humanoid.WalkSpeed = 16
+        humanoid.JumpPower = 50
+        print("✅ Телепорт завершён!")
+    end
 end)
