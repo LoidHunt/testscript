@@ -1,5 +1,3 @@
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-
 local orderMap = {
     ["Fizzly is my favorite drink. Gimme that please."] = "MountainDew",
     ["Hey pizza person. Give me a pepperoni pizza/Hi"] = "PepperoniPizza",
@@ -29,7 +27,6 @@ local function solveCustomer(customer)
     local head = customer:FindFirstChild("Head")
     if not head then return end
 
-    -- DialogSimple содержит Correct (не Dialog!)
     local dialogSimple = head:FindFirstChild("DialogSimple")
     if not dialogSimple then return end
 
@@ -45,10 +42,10 @@ local function solveCustomer(customer)
     end
 
     local register = getRegister()
-    if not register then
-        warn("Регистр не найден!")
-        return
-    end
+    if not register then warn("Регистр не найден!") return end
+
+    local button = register:FindFirstChild("Button" .. product)
+    if not button then warn("Кнопка не найдена: Button" .. product) return end
 
     -- Шаг 1: кликнуть на пузырь
     workspace:WaitForChild("Dialog"):FireServer("ClickedBubble", head)
@@ -59,7 +56,7 @@ local function solveCustomer(customer)
         :WaitForChild("PlayerAction"):FireServer("ClickedBubble", true)
     task.wait(0.3)
 
-    -- Шаг 3: выбрать правильный ответ (ResponseSelected + DialogSimple.Correct)
+    -- Шаг 3: выбрать правильный ответ
     workspace:WaitForChild("Dialog"):FireServer("ResponseSelected", correctChoice, head)
     task.wait(0.3)
 
@@ -67,14 +64,12 @@ local function solveCustomer(customer)
     workspace:WaitForChild("Animation"):WaitForChild("AnimationStopped"):FireServer("Hi")
     task.wait(0.1)
     workspace:WaitForChild("Animation"):WaitForChild("AnimationStarted"):FireServer("Hi")
-    task.wait(0.3)
+    task.wait(0.4)
 
-    -- Шаг 5: финальный ремот с товаром
-    local finalRemote = ReplicatedStorage
-        :WaitForChild("Communication")
-        :WaitForChild("Events")
-        :WaitForChild("") -- пустое имя как в логе
-        :FireServer(customer, product, register)
+    -- Шаг 5: нажать кнопку товара
+    workspace:WaitForChild("GameService")
+        :WaitForChild("RegisterButtonPressedNoCustomer")
+        :FireServer(product, button)
 
     print("✅ " .. customer.Name .. " -> " .. product)
 end
